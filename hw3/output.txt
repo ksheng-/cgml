@@ -1,0 +1,5 @@
+Extracting data/train-images-idx3-ubyte.gz
+Extracting data/train-labels-idx1-ubyte.gz
+Extracting data/t10k-images-idx3-ubyte.gz
+Extracting data/t10k-labels-idx1-ubyte.gz
+test accuracy=0.9782999753952026, test loss=0.15468992292881012
