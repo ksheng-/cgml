@@ -1,0 +1,16 @@
+Kevin Sheng
+ECE471 Selected Topics in Machine Learning - Assignment 4
+
+Hi Prof Curro,
+
+Initially, when starting this assignment (which I started way too late), I planned on trying out ResNet-18/34, using the updated block ordering. In order to do that, I decided to refactor my last program and break different parts of the model out into different methods for reusablity, instead of having train/test/build/infer all sitting in the constructor, as well as to get it to play nice with the cifar10_input.py module from the tensorflow examples. Unfortunately this made everything not work, since I think I was reinitializing / adding some parameters in the graph. I reverted everything back to the everything-in-__init__ version and chose a much simpler model to use, a 4 level cnn very loosely based on AlexNet, but with different dimensions and only one fully connected layer at the end. I used an AdamOptimizer, which ended up working pretty well. A .50 dropout was used for regularization, and the learning rate was manually lowered through the training process. I didn't use a validation set for performance monitoring since I was really lazy and didn't feel like figuring out how the QueueRunners worked. I also kept running into CUDA crashes randomly throughout the training process, this is probably since I'm running a GTX860M on Arch using Bumblebee/Optimus, which cuda probably doesn't like.
+
+Final results:
+CIFAR-10
+global_step 240625 (epoch 77): test accuracy=0.7824000000953675, test loss=1.6167795419692994
+
+CIFAR-100, fine grained
+global_step 90625 (epoch 29): test accuracy=0.4476000010967255, test loss=2.9280999660491944
+
+So pretty expected due to the simplicity of the network. Comparable to other online examples, but nowhere close to state of the art.
+

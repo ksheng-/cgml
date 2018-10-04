@@ -9,12 +9,12 @@ import matplotlib.pyplot as plt
 import pickle
 from tqdm import tqdm
 # https://github.com/tensorflow/models/blob/master/tutorials/image/cifar10/cifar10_input.py
-import cifar10_input
+import cifar100_input
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 
-class Cifar10():
+class Cifar100():
     def __init__(self, eval=False):
         # pretty standard/simple DNN loosely based on alexnet since its
         #   simple and old so it trains decently fast on a GTX860M
@@ -30,13 +30,13 @@ class Cifar10():
         # linear -> 1x10
 
         epochs=100
-        learning_rate=.001
+        learning_rate=.00000001
         batch_size=16
         early_stop=False
         num_train = 50000
         
         f = [3, 3, 3, 3]
-        k = [32, 32, 64, 64, 384]
+        k = [32, 64, 128, 128, 512]
         
         # conv1
         w1 = self.weight('w1', [f[0], f[0], 3, k[0]])
@@ -59,8 +59,8 @@ class Cifar10():
         b5 = self.bias('b5', [k[4]])
         
         # fc2
-        w6 = self.weight('w6', [k[4], 10])
-        b6 = self.bias('b6', [10])
+        w6 = self.weight('w6', [k[4], 100])
+        b6 = self.bias('b6', [100])
         
         # linear
         #  w5 = self.weight('w5', [k[3], 10])
@@ -68,12 +68,12 @@ class Cifar10():
         self.params = (w1, w2, w3, w4, w5, w6)
 
         if eval:
-            images, labels = cifar10_input.inputs(
-                True, 'cifar-10-batches-bin', 1000
+            images, labels = cifar100_input.inputs(
+                True, 'cifar-100-binary', 1000
             )
         else:
-            images, labels = cifar10_input.distorted_inputs(
-                'cifar-10-batches-bin', batch_size
+            images, labels = cifar100_input.distorted_inputs(
+                'cifar-100-binary', batch_size
             )
         s = [1, 1, 1, 1]
 
@@ -81,12 +81,12 @@ class Cifar10():
         X_ = self.conv(images, w1, s[0], b1)
         X_ = self.conv(X_, w2, s[1], b2)
         X_ = self.pool(X_, 2, 2)
-        X_ = tf.nn.dropout(X_, .25)
+        #  X_ = tf.nn.dropout(X_, .25)
         #  X_ = self.batch_norm(X_)
         X_ = self.conv(X_, w3, s[2], b3)
         X_ = self.conv(X_, w4, s[3], b4)
         X_ = self.pool(X_, 2, 2)
-        X_ = tf.nn.dropout(X_, .25)
+        #  X_ = tf.nn.dropout(X_, .25)
         #  X_ = self.batch_norm(X_)
         X_ = tf.nn.relu(self.fc(X_, w5, b5))
         X_ = tf.nn.dropout(X_, .5)
@@ -105,13 +105,12 @@ class Cifar10():
         steps_per_epoch = num_train // batch_size
         
         saver = tf.train.Saver()
-        checkpoint = 'checkpoints/model.v2.ckpt'
+        checkpoint = 'checkpoints/model.cifar100.v5.ckpt'
         with tf.Session(config=config) as sess:
             sess.run(tf.global_variables_initializer())
             coord = tf.train.Coordinator()
             threads = tf.train.start_queue_runners(sess=sess, coord=coord) 
-            
-            try:
+            try: 
                 saver.restore(sess, checkpoint)
             except:
                 pass
@@ -136,12 +135,12 @@ class Cifar10():
                         total_accuracy = 0
                         total_loss = 0
                     
-                    a, l, o = sess.run([accuracy, loss, optim]) 
+                    a, l, o, g = sess.run([accuracy, loss, optim, global_step]) 
                     total_accuracy += a
                     total_loss += l
                     
                     t.set_postfix(
-                        epoch=epoch,
+                        epoch=g // steps_per_epoch,
                         step=step_in_epoch,
                         acc=total_accuracy / step_in_epoch,
                         loss=total_loss / step_in_epoch,
@@ -203,4 +202,4 @@ class Cifar10():
         return tf.matmul(inputs, filter) + bias
 
 if __name__ == '__main__':
-    model = Cifar10(eval=True)
+    model = Cifar100(eval=True)
