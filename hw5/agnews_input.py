@@ -43,6 +43,7 @@ class DataSet():
         
         self.num_train = int(np.floor((1-.1) * len(self._train_labels)))
         self.index_in_epoch = 0
+        self.current_epoch = 0
 
         self.shuffle_and_split()
 
@@ -55,13 +56,12 @@ class DataSet():
 
     def next_batch(self, batch_size, shuffle=True, encoded=True):
         start = self.index_in_epoch
-        if shuffle and self.index_in_epoch == 0:
-            self.shuffle_and_split()
 
         if self.index_in_epoch + batch_size > len(self.train_labels):
             remaining_data = self.train_data[start:]
             remaining_labels = self.train_labels[start:]
             
+            self.current_epoch += 1
             self.shuffle_and_split()
             
             rollover_data = self.train_data[:batch_size-len(remaining)]
@@ -71,14 +71,13 @@ class DataSet():
             
             data = remaining_data + rollover_data
             labels = remaining_labels + rollover_labels
-            print(labels)    
-            return quantize(data), np.eye(4)[[ord(l)-49 for l in labels]]
+            return quantize(data), np.eye(4)[[ord(l)-49 for l in labels]], self.current_epoch
 
         else:
             self.index_in_epoch += batch_size
             data = self.train_data[start:self.index_in_epoch]
             labels = self.train_labels[start:self.index_in_epoch]
-            return quantize(data), np.eye(4)[[ord(l)-49 for l in labels]]
+            return quantize(data), np.eye(4)[[ord(l)-49 for l in labels]], self.current_epoch
 
     def get_validation_set(self):
         return quantize(self.validation_data), np.eye(4)[[ord(l)-49 for l in self.validation_labels]]
@@ -89,5 +88,8 @@ class DataSet():
 
 if __name__ == '__main__':
     agnews = DataSet()
-    agnews.get_test_set()
+    import time
+    while(True):
+        agnews.next_batch(128)
+        print(time.time())
 

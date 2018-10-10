@@ -29,7 +29,7 @@ class Model():
         y = tf.placeholder(tf.float32, [batch_size, 4])
         
         # conv1
-        w1 = self.weight('w1', [f[0], 1, k[0]])
+        w1 = self.weight('w1', [f[0], 26, k[0]])
         b1 = self.bias('b1', [k[0]])
         # conv2
         w2 = self.weight('w2', [f[1], k[0], k[1]])
@@ -47,7 +47,7 @@ class Model():
         w6 = self.weight('w6', [f[5], k[4], k[5]])
         b6 = self.bias('b6', [k[5]])
         # fc1, after 3 maxpools
-        w7 = self.weight('w7', [34*k[5], k[6]])
+        w7 = self.weight('w7', [37*k[5], k[6]])
         b7 = self.bias('b7', [k[6]])
         # fc2
         w8 = self.weight('w8', [k[6], k[7]])
@@ -84,8 +84,6 @@ class Model():
 
         optim = tf.train.MomentumOptimizer(learning_rate, momentum).minimize(loss, global_step=global_step)
 
-        steps_per_epoch = num_train // batch_size
-        
         saver = tf.train.Saver()
         checkpoint = 'checkpoints/model.ckpt'
         with tf.Session(config=config) as sess:
@@ -97,47 +95,61 @@ class Model():
                 pass
 
             if eval:
-                total_accuracy = 0
-                total_loss = 0 
-                for batch in range(10):
-                    a, l, g = sess.run([accuracy, loss, global_step])
-                    total_accuracy += a
-                    total_loss += l
-                print('global_step {} (epoch {}): test accuracy={}, test loss={}'.format(g, g // steps_per_epoch, total_accuracy / 10, total_loss / 10))
-                return
-            
-            with tqdm(range(steps_per_epoch * epochs)) as t:
-                best = 0
-                for step in t:
-                    data, labels = dataset.next_batch(batch_size)
-                    data, labels = dataset.next_batch(batch_size)
-                    batch_X, batch_Y = data.tr.next_batch(batch_size)
-                    a_train, c_train, _ = sess.run([accuracy, loss, optim],
-                        feed_dict={X: batch_X, y: batch_Y, keep_prob: dropout})
-                    
-                    a_validation, c_validation, _ = sess.run([accuracy, loss, optim],
-                        feed_dict={X: data.validation.X, y: data.validation.y, keep_prob: 1.0})
-                if a_validation >= best:
-                    saver.save(sess, checkpoint)
-                    epoch, step_in_epoch = divmod(step, steps_per_epoch)
-                    if step_in_epoch == 0:
-                        saver.save(sess, checkpoint)
-                        total_accuracy = 0
-                        total_loss = 0
-                    
-                    a, l, o = sess.run([accuracy, loss, optim]) 
-                    total_accuracy += a
-                    total_loss += l
-                    
-                    t.set_postfix(
-                        epoch=epoch,
-                        step=step_in_epoch,
-                        acc=total_accuracy / step_in_epoch,
-                        loss=total_loss / step_in_epoch,
-                    )
+                data_test, labels_test = dataset.get_test_set()
+                a_test, l_test, _ = sess.run([accuracy, loss, optim],
+                    feed_dict={X: data_test, y: labels_test})
+                print('test accuracy: {} / test loss: {}.'.format(a_test, l_test))
 
-            if early_stop:
-                saver.restore(sess, checkpoint)
+            best = np.inf 
+            step_in_epoch = 0
+            current_epoch = 0
+            a_total, l_total = 0, 0
+            a_val, l_val = 0, 0
+            data_val, labels_val = dataset.get_validation_set()
+            with tqdm(total=epochs) as t:
+                while True:
+                    # grab the next batch of data
+                    data_train, labels_train, training_epoch = dataset.next_batch(batch_size)
+
+                    # validate at the end of each epoch
+                    if training_epoch > current_epoch:
+                        a_val, l_val, _ = sess.run([accuracy, loss, optim],
+                            feed_dict={X: data_val, y: labels_val})
+                        if l_val < best:
+                            saver.save(sess, checkpoint)
+                            best = l_val
+                        saver.save(sess, 'model.{}.ckpt'.format(current_epoch))
+                        t.set_postfix(
+                            step=step,
+                            t_acc=a_total / step_in_epoch,
+                            t_loss=l_total / step_in_epoch,
+                            v_acc=a_val,
+                            v_loss=l_val,
+                        )
+                        
+                        a_total = 0
+                        l_total = 0
+                        step_in_epoch = 0
+                        data_val, labels_val = dataset.get_validation_set()
+                        current_epoch = training_epoch
+                        t.update(current_epoch)
+                    
+                    if current_epoch >= epochs:
+                        break
+
+                    a, l, o, s = sess.run([accuracy, loss, optim, global_step],
+                        feed_dict={X: data_train, y: labels_train}) 
+                    a_total += a
+                    l_total += l
+                    step_in_epoch += 1
+
+                    t.set_postfix(
+                        step=s,
+                        t_acc=a_total / step_in_epoch,
+                        t_loss=l_total / step_in_epoch,
+                        v_acc=a_val,
+                        v_loss=l_val,
+                    )
     
     def weight(self, name, shape):
         return tf.get_variable(
@@ -161,10 +173,10 @@ class Model():
             fused=True
         )
 
-    def conv(self, inputs, filter, stride, bias):
+    def conv(self, value, filters, stride, bias):
         return tf.nn.relu(tf.nn.conv1d(
-            input=inputs,
-            filter=filter,
+            value=value,
+            filters=filters,
             stride=stride,
             padding='SAME',
         ) + bias)
