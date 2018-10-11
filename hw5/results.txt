@@ -1,0 +1,11 @@
+### Kevin Sheng
+### ECE471 Selected Topics in Machine Learning - Assignment 5
+
+For this assignment, I trained the character-cnn discussed by Zhang/LeCun in https://arxiv.org/pdf/1502.01710.pdf.
+The architecture was more or less identical, with some padding differences, but implemented in TensorFlow instead of pytorch. The dictionary used for quantizing the text was case insensitive, and no data augmentation was used.
+
+After 12 epochs of training (with a mini-batch size of 128 and 90/10 train/val split), the model have around ~.95 training accuracy and ~.94 validation accuracy. As in the paper, the learning rate started at .01 and was halved every 3 epochs.
+
+The final result on the test set was:
+test accuracy: 0.8765789474311628 / test loss: 0.5340727469638774.
+
