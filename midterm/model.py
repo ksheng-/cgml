@@ -13,7 +13,7 @@ import blocks
 
 
 class Model():
-    def __init__(self, data, train=False, save=False):
+    def __init__(self, data, train=False, save=False, load=False):
         epochs = 200
         learning_rate = .001
         momentum = .9
@@ -68,11 +68,11 @@ class Model():
         checkpoint = 'checkpoints/model.ckpt'
         with tf.Session(config=config) as sess:
             sess.run(tf.global_variables_initializer())
-            
-            try:
-                saver.restore(sess, 'checkpoints/model.ckpt.best')
-            except:
-                pass
+            if load:
+                try:
+                    saver.restore(sess, 'checkpoints/model.ckpt.best')
+                except:
+                    pass
 
             if not train:
                 a_test, l_test = sess.run([accuracy, loss],
@@ -102,13 +102,10 @@ class Model():
                     step_in_epoch += 1
 
                     t.set_postfix(
-                        step=s,
                         epoch=total_epochs,
-                        l0=params,
+                        l0=[int(param) for param in params],
                         t_acc=a_total / step_in_epoch,
-                        t_loss=l_total / step_in_epoch,
-                        v_acc=a_val,
-                        v_loss=l_val,
+                        v_acc=a_val
                     )
                     
                     # check validation loss every complete epoch
@@ -124,13 +121,10 @@ class Model():
                             saver.save(sess, checkpoint)
                         #  saver.save(sess, 'model.{}.ckpt'.format(current_epoch))
                         t.set_postfix(
-                            step=s,
                             epoch=total_epochs,
-                            l0=params,
+                            l0=[int(param) for param in params],
                             t_acc=a_total / data.train._index_in_epoch,
-                            t_loss=l_total / data.train._index_in_epoch,
-                            v_acc=a,
-                            v_loss=l,
+                            v_acc=a
                         )
                         
                         a_total = 0
@@ -150,8 +144,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--train', action='store_true', help='')
     parser.add_argument('--save', action='store_true', help='')
+    parser.add_argument('--load', action='store_true', help='')
 
     args = parser.parse_args()
 
     data = mnist.read_data_sets("data", one_hot=True, reshape=False)
-    model = Model(data, train=args.train, save=args.save)
+    model = Model(data, train=args.train, save=args.save, load=args.load)
