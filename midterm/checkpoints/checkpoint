@@ -1,3 +1,4 @@
 model_checkpoint_path: "model.ckpt"
 all_model_checkpoint_paths: "model.ckpt.best"
+all_model_checkpoint_paths: "model.ckpt.10"
 all_model_checkpoint_paths: "model.ckpt"
